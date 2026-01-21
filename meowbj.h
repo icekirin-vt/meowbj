@@ -49,7 +49,7 @@ mobj_filestats mobj_getFileStats(char *file)
  
   char *currentLine=malloc(strlen(file)*sizeof(char));
   strcpy(currentLine,file);
-  while(currentLine){
+  while(currentLine != NULL){
     char *nextLine=strchr(currentLine, '\n');
     if(nextLine) *nextLine='\0';
     //printf("currentLine=[%s]\n",currentLine);
@@ -82,6 +82,34 @@ mobj_filestats mobj_getFileStats(char *file)
   return result;
 }
 
+mobj_vec3 mobj_strtovec3(char floatString[])
+{
+  char *element;
+  printf("\t%s",floatString);
+  element= strtok(floatString, " ");
+  int counter= 0;
+  mobj_vec3 storedValue={0};
+
+  while(element!= NULL){
+    //printf("\t%d:%s\n",counter,elem);
+    switch(counter){
+    case 0:
+      storedValue.x=atof(element);
+      break;
+    case 1:
+      storedValue.y=atof(element);
+      break;
+    default:
+      storedValue.z=atof(element);
+    }
+    if(counter<3) counter=counter+1;
+    element=strtok(NULL, " ");
+  }
+  
+  return storedValue;
+}
+
+
 
 mobj_obj loadObj(char path[])
 {
@@ -98,29 +126,31 @@ mobj_obj loadObj(char path[])
   size_t faceCount=0;
   
   char *currentLine=fileContents;
-  while(currentLine){
+  while(currentLine != NULL ){
+    
     char *nextLine=strchr(currentLine, '\n');
     char lineattrib[3];
     strncpy(lineattrib,currentLine,2);
+    printf("[%s]",lineattrib);
+    char actuallyCurrentLine[40];
+    
+    strncpy(actuallyCurrentLine,currentLine, nextLine-currentLine);
     if (strcmp(lineattrib,"v ")==0){
-      //int i=0;
-      mobj_vec3 tempVec={0};
-      char floatString[29];
-      strncpy(floatString,currentLine+(sizeof(char)*2),29);
-      printf("floatString: %s\n",floatString);
-      //vertexStore[vertexCount];
+      vertexStore[vertexCount]=mobj_strtovec3(actuallyCurrentLine+2); //+2 just to skip "v " @start
       vertexCount++;
     }
     else if (strcmp(lineattrib,"vn")==0){
-	normalCount++;
-      }
-    else if (strcmp(lineattrib,"vt")==0){
+      normalStore[normalCount]=mobj_strtovec3(actuallyCurrentLine+3);  //+3 for vn @start
+      normalCount++;
+    }
+    else if (strcmp(lineattrib,"vt")==0){  //TODO: UV inport
       uvCount++;
       }
     else if (strcmp(lineattrib,"f ")==0){
       faceCount++;
       }
-    
+
+    printf("\n");
     if(nextLine) *nextLine='\n';
     currentLine=nextLine ? (nextLine+1) : NULL;
   }
