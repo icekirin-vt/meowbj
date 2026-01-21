@@ -1,4 +1,4 @@
-CFLAGS= -Wextra -Werror -std=c99
+CFLAGS= -Wextra -std=c99 -g
 
 basic: 
 	clang $(CFLAGS) main.c -o program
