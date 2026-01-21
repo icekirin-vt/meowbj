@@ -1,4 +1,0 @@
-CFLAGS= -Wall -Wextra
-
-basic: 
-	clang $(CFLAGS) main.c -o program
