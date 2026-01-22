@@ -167,8 +167,8 @@ void mobj_objAssembler(char faceString[],mobj_obj loadedData, mobj_obj *saveTo, 
     size_t  vertID,normalID,textureID;
     
     vertID=    strtol(element,            NULL, 10)-1;
-    textureID= strtol(firstSlashPos+1,    NULL, 10);
-    normalID=  strtol(secondSlashPos+1,   NULL, 10);
+    textureID= strtol(firstSlashPos+1,    NULL, 10)-1;
+    normalID=  strtol(secondSlashPos+1,   NULL, 10)-1;
 
     
     //printf(" faceid: %zu \nParsed: \t v:%zu  t:%zu  n:%zu", *counter,vertID,textureID,normalID);
