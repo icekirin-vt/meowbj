@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <sys/time.h>
 
 typedef struct{
   float x,y,z;
@@ -26,7 +27,7 @@ char *mobj_loadFile(char path[])
 
   char *fileContents=malloc((fileSize+1)*sizeof(char));
   fread(fileContents, fileSize, 1,filePointer);
-  
+  fclose(filePointer);
   return fileContents;
 }
 
@@ -38,12 +39,18 @@ typedef struct{
   mobj_filestats stats;
 }mobj_obj;
 
-
+void freeObj(mobj_obj *objToFree){
+  
+  free(objToFree->verts);
+  free(objToFree->norms);
+  free(objToFree->uvs);
+}
 
 
 mobj_filestats mobj_getFileStats(char *file)
 {
-  
+  struct timeval stop, start;
+  gettimeofday(&start, NULL);
   size_t vertexCount=0;
   size_t normalCount=0;
   size_t uvCount=0;
@@ -80,26 +87,29 @@ mobj_filestats mobj_getFileStats(char *file)
     .uvs=uvCount,
     .faces=faceCount
   };
-  
+  gettimeofday(&stop, NULL);
+  printf("took %lu us\n", (stop.tv_sec - start.tv_sec) * 1000000 + stop.tv_usec - start.tv_usec);
   return result;
 }
 
-mobj_vec3 mobj_strtovec3(char floatString[])
+
+
+mobj_vec3 *mobj_strtovec3(char floatString[])
 {
   char *element;
-  printf("\t%s",floatString);
+  //printf("\t%s",floatString);
   element= strtok(floatString, " ");
   int counter= 0;
-  mobj_vec3 storedValue={0};
+  mobj_vec3 *storedValue=malloc(sizeof(mobj_vec3));;
 
   while(element!= NULL){
-    //printf("\t%d:%s\n",counter,elem);
+    //printf("\t%d:%s\n",counter,element);
     if(counter==0)
-      storedValue.x=atof(element);
+      storedValue->x=atof(element);
     else if (counter==1)
-      storedValue.y=atof(element);
+      storedValue->y=atof(element);
     else
-      storedValue.z=atof(element);
+      storedValue->z=atof(element);
 
     if(counter<3) counter=counter+1;
     element=strtok(NULL, " ");
@@ -110,7 +120,7 @@ mobj_vec3 mobj_strtovec3(char floatString[])
 mobj_vec2 mobj_strtovec2(char floatString[])
 {
   char *element;
-  printf("\t%s",floatString);
+  //printf("\t%s",floatString);
   element= strtok(floatString, " ");
   int counter= 0;
   mobj_vec2 storedValue={0};
@@ -159,7 +169,7 @@ void mobj_objAssembler(char faceString[],mobj_obj loadedData, mobj_obj *saveTo, 
 
     size_t  vertID,normalID,textureID;
     
-    vertID=    strtol(element,            NULL, 10);
+    vertID=    strtol(element,            NULL, 10)-1;
     textureID= strtol(firstSlashPos+1,    NULL, 10);
     normalID=  strtol(secondSlashPos+1,   NULL, 10);
 
@@ -184,19 +194,33 @@ mobj_obj loadObj(char path[])
   char *fileContents=mobj_loadFile(path);
   mobj_filestats fileStats=mobj_getFileStats(fileContents);
 
+  mobj_vec3 zeroVec3={.x=0.0,.y=0.0, .z=0.0};
+  mobj_vec2 zeroVec2={.u=0.0, .v=0.0};
   mobj_vec3 vertexStore[fileStats.verts];
   mobj_vec3 normalStore[fileStats.normals];
   mobj_vec2 uvStore[fileStats.uvs];
 
+  for(size_t i=0;i<fileStats.verts;i++){
+    vertexStore[i]= zeroVec3;
+    if(i<fileStats.normals)
+      normalStore[i]= zeroVec3;
+ }
+  for(size_t i=0;i<fileStats.uvs;i++)
+    uvStore[i]= zeroVec2;
+  
   size_t vertexCount=0;
   size_t normalCount=0;
   size_t uvCount=0;
   size_t faceCount=0;
+
+  faceCount=fileStats.faces;
   
   char *currentLine=fileContents;
   size_t counter=0;
   mobj_obj parsedPreAssembler={0};
   mobj_obj saveObj={0};
+
+
   saveObj.verts= malloc(faceCount*3*sizeof( mobj_vec3 ));
   saveObj.norms= malloc(faceCount*3*sizeof( mobj_vec3 ));
   saveObj.uvs=   malloc(faceCount*3*sizeof( mobj_vec2 ));
@@ -207,16 +231,21 @@ mobj_obj loadObj(char path[])
     if(nextLine) *nextLine ='\0';
     char lineattrib[3];
     strncpy(lineattrib,currentLine,2);
-    printf("[%s]",lineattrib);
+    //printf("[%s]",lineattrib);
     char actuallyCurrentLine[40];
     
     strcpy(actuallyCurrentLine,currentLine);
     if (strcmp(lineattrib,"v ")==0){
-      vertexStore[vertexCount]=mobj_strtovec3(actuallyCurrentLine+2); //+2 just to skip "v " @start
+      //vertexStore[vertexCount]
+      mobj_vec3 *parsedVec3=mobj_strtovec3(actuallyCurrentLine+2); //+2 just to skip "v " @start
+      memcpy(&vertexStore[vertexCount],parsedVec3, sizeof(mobj_vec3));
+      free(parsedVec3);
       vertexCount++;
     }
     else if (strcmp(lineattrib,"vn")==0){
-      normalStore[normalCount]=mobj_strtovec3(actuallyCurrentLine+3);  //+3 for vn @start
+      mobj_vec3 *parsedVec3=mobj_strtovec3(actuallyCurrentLine+3);  //+3 for vn @start
+      memcpy(&normalStore[normalCount],parsedVec3,sizeof(mobj_vec3));
+      free(parsedVec3);
       normalCount++;
     }
     else if (strcmp(lineattrib,"vt")==0){  // +3 for vt @start
@@ -235,7 +264,7 @@ mobj_obj loadObj(char path[])
       }
     
 
-    printf("\n");
+    //printf("\n");
     if(nextLine) *nextLine='\n';
     currentLine=nextLine ? (nextLine+1) : NULL;
   }
