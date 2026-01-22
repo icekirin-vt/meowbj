@@ -21,6 +21,10 @@ typedef struct{
 char *mobj_loadFile(char path[])
 {
   FILE *filePointer=fopen(path, "rb");
+  if( filePointer == NULL){
+    printf("ERROR \t PATH:\n[%s] not existing \n",path );
+    return NULL;
+  }
   fseek(filePointer, 0L, SEEK_END);    //seeks to end of file to get its size for future malloc
   size_t fileSize=ftell(filePointer);
   rewind(filePointer);
@@ -140,44 +144,41 @@ mobj_vec2 mobj_strtovec2(char floatString[])
 void mobj_objAssembler(char faceString[],mobj_obj loadedData, mobj_obj *saveTo, size_t *counter)
 {
   char *element;
-  
-  element= strtok(faceString, " ");
-  size_t facesCount=loadedData.stats.faces;
-  
-
-
-
-  //mobj_obj result={0};
-  mobj_filestats finalStat= { .verts=facesCount*3,
-    .normals=facesCount*3,
-    .uvs=facesCount*3,
-    .faces=facesCount
-  };
-  
+  element= strtok(faceString, " ");  
   //printf("   parsed :");
-  
   while(element!=NULL){
     //   "1\0 2\0 3\0"
+    char *secondSlashPos=NULL;
     char *firstSlashPos=strchr(element,'/');
-    *firstSlashPos='\0';
-    char *secondSlashPos=strchr(firstSlashPos+1,'/');
-    *secondSlashPos='\0';
+    if(firstSlashPos!=NULL){
+      *firstSlashPos='\0';
+      secondSlashPos=strchr(firstSlashPos+1,'/');
+      if(secondSlashPos!=NULL){
+	*secondSlashPos='\0';
+      } else secondSlashPos=firstSlashPos;
+    }
+    else firstSlashPos=strchr(element,'\0')-1;
+
+    
     //printf("%s,%s,%s", element,firstSlashPos+1,secondSlashPos+1);
 
     size_t  vertID,normalID,textureID;
-    
     vertID=    strtol(element,            NULL, 10)-1;
-    textureID= strtol(firstSlashPos+1,    NULL, 10)-1;
-    normalID=  strtol(secondSlashPos+1,   NULL, 10)-1;
+    saveTo->verts[*counter] =loadedData.verts[vertID];
 
+    if((loadedData.stats.uvs>0) && (strcmp(firstSlashPos+1,"")!=0)){
+    textureID= strtol(firstSlashPos+1,    NULL, 10)-1;
+    saveTo->uvs  [*counter]   =loadedData.uvs[textureID];
+    
+    }
+    
+    if((loadedData.stats.normals>0) && (strcmp(secondSlashPos+1,"")!=0)){
+    normalID=  strtol(secondSlashPos+1,   NULL, 10)-1;
+    saveTo->norms[*counter] =loadedData.norms[normalID];
+    }
     
     //printf(" faceid: %zu \nParsed: \t v:%zu  t:%zu  n:%zu", *counter,vertID,textureID,normalID);
 
-   
-    saveTo->verts[*counter] =loadedData.verts[vertID];
-    saveTo->norms[*counter] =loadedData.norms[normalID];
-    saveTo->uvs  [*counter]   =loadedData.uvs[textureID];
-    
     
     *counter=*counter+1;
     //printf("\n");
@@ -186,31 +187,25 @@ void mobj_objAssembler(char faceString[],mobj_obj loadedData, mobj_obj *saveTo, 
   //printf("\n");
 }
 
-mobj_obj loadObj(char path[])
+int loadObj(char path[],mobj_obj *resulting)
 {
   char *fileContents=mobj_loadFile(path);
+  if(fileContents==NULL){
+    return -1;
+  }
   mobj_filestats fileStats=mobj_getFileStats(fileContents);
-
-  mobj_vec3 zeroVec3={.x=0.0,.y=0.0, .z=0.0};
-  mobj_vec2 zeroVec2={.u=0.0, .v=0.0};
   mobj_vec3 vertexStore[fileStats.verts];
   mobj_vec3 normalStore[fileStats.normals];
   mobj_vec2 uvStore[fileStats.uvs];
 
-  for(size_t i=0;i<fileStats.verts;i++){
-    vertexStore[i]= zeroVec3;
-    if(i<fileStats.normals)
-      normalStore[i]= zeroVec3;
- }
-  for(size_t i=0;i<fileStats.uvs;i++)
-    uvStore[i]= zeroVec2;
   
   size_t vertexCount=0;
   size_t normalCount=0;
   size_t uvCount=0;
   size_t faceCount=0;
 
-  faceCount=fileStats.faces;
+  size_t loadedFaces=fileStats.faces;
+  //faceCount=fileStats.faces;
   
   char *currentLine=fileContents;
   size_t counter=0;
@@ -218,9 +213,9 @@ mobj_obj loadObj(char path[])
   mobj_obj saveObj={0};
 
 
-  saveObj.verts= malloc(faceCount*3*sizeof( mobj_vec3 ));
-  saveObj.norms= malloc(faceCount*3*sizeof( mobj_vec3 ));
-  saveObj.uvs=   malloc(faceCount*3*sizeof( mobj_vec2 ));
+  saveObj.verts= malloc(loadedFaces*3*sizeof( mobj_vec3 ));
+  saveObj.norms= malloc(loadedFaces*3*sizeof( mobj_vec3 ));
+  saveObj.uvs=   malloc(loadedFaces*3*sizeof( mobj_vec2 ));
   
   while(currentLine != NULL ){
     
@@ -248,14 +243,18 @@ mobj_obj loadObj(char path[])
     else if (strcmp(lineattrib,"vt")==0){  // +3 for vt @start
       uvStore[uvCount]=mobj_strtovec2(actuallyCurrentLine+3);
       uvCount++;
-      if (uvCount==fileStats.uvs){
+    }
+    else if (strcmp(lineattrib,"f ")==0){
+      if (faceCount==0){
+	//printf("saving all stores");
 	parsedPreAssembler.verts=vertexStore;
 	parsedPreAssembler.norms=normalStore;
 	parsedPreAssembler.uvs=uvStore;
 	parsedPreAssembler.stats=fileStats;
       }
-      }
-    else if (strcmp(lineattrib,"f ")==0){
+
+      
+      //printf(" * |%s| \n",actuallyCurrentLine+2);
       mobj_objAssembler(actuallyCurrentLine+2, parsedPreAssembler, &saveObj, &counter);
       faceCount++;
       }
@@ -271,7 +270,8 @@ mobj_obj loadObj(char path[])
   
   saveObj.stats=fileStats;
   
-  return saveObj;
+  *resulting=saveObj;
+  return 0;
 }
 
 
