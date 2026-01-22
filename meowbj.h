@@ -8,24 +8,26 @@
 
 typedef struct{
   float x,y,z;
-}mobj_vec3;
+}meowVec3;
 
 typedef struct{
   float u,v;
-}mobj_vec2;
+}meowVec2;
 
 typedef struct{
-  size_t verts,normals,uvs,faces;
-}mobj_filestats;
+  size_t vert,norm,tex,faces;
+}meowStats;
 
 char *mobj_loadFile(char path[])
 {
   FILE *filePointer=fopen(path, "rb");
+
   if( filePointer == NULL){
-    printf("ERROR \t PATH:\n[%s] not existing \n",path );
+    printf("ERROR \t PATH:\n'%s' does not exist!\n",path );
     return NULL;
   }
-  fseek(filePointer, 0L, SEEK_END);    //seeks to end of file to get its size for future malloc
+
+  fseek(filePointer, 0L, SEEK_END);
   size_t fileSize=ftell(filePointer);
   rewind(filePointer);
 
@@ -37,56 +39,56 @@ char *mobj_loadFile(char path[])
 
 
 typedef struct{
-  mobj_vec3 *verts;
-  mobj_vec3 *norms;
-  mobj_vec2 *uvs;
-  mobj_filestats stats;
-}mobj_obj;
+  meowVec3 *verts;
+  meowVec3 *norms;
+  meowVec2 *uvs;
+  meowStats stats;
+}meowObj;
 
-void freeObj(mobj_obj *objToFree){
+void freeObj(meowObj *obj){
   
-  free(objToFree->verts);
-  free(objToFree->norms);
-  free(objToFree->uvs);
+  free(obj->verts);
+  free(obj->norms);
+  free(obj->uvs);
 }
 
 
-mobj_filestats mobj_getFileStats(char *file)
+meowStats meowGetFileStats(char *file)
 {
   size_t vertexCount=0;
   size_t normalCount=0;
-  size_t uvCount=0;
+  size_t texCount=0;
   size_t faceCount=0;
  
-  char *currentLine=malloc(strlen(file)*sizeof(char));
-  strcpy(currentLine,file);
-  while(currentLine != NULL){
-    char *nextLine=strchr(currentLine, '\n');
+  char *lineStart=malloc(strlen(file)*sizeof(char));
+  strcpy(lineStart,file);
+  while(lineStart!=NULL){
+    char *nextLine=strchr(lineStart, '\n');
     if(nextLine) *nextLine='\0';
-    //printf("currentLine=[%s]\n",currentLine);
-    char lineattrib[3];
-    strncpy(lineattrib, currentLine, 2);
-    if (strcmp(lineattrib,"v ")==0){
+    //printf("lineStarts at=[%s]\n",lineStart);
+    char memberKind[3];
+    strncpy(memberKind, currentLine, 2);
+    if (strcmp(memberKind,"v ")==0){
       vertexCount++;
     }
-    else if (strcmp(lineattrib,"vn")==0){
+    else if (strcmp(memberKind,"vn")==0){
 	normalCount++;
       }
-    else if (strcmp(lineattrib,"vt")==0){
-      uvCount++;
+    else if (strcmp(memberKind,"vt")==0){
+      texCount++;
       }
-    else if (strcmp(lineattrib,"f ")==0){
+    else if (strcmp(memberKind,"f ")==0){
       faceCount++;
       }
     
     if(nextLine) *nextLine='\n';
-    currentLine=nextLine ? (nextLine+1) : NULL;
+    lineStart=nextLine ? (nextLine+1) : NULL;
   }
-  free(currentLine);
-  mobj_filestats result={
-    .verts=vertexCount,
-    .normals=normalCount,
-    .uvs=uvCount,
+  free(lineStart);
+  meowStats result={
+    .vert=vertexCount,
+    .norm=normalCount,
+    .tex=texCount,
     .faces=faceCount
   };
   
@@ -95,7 +97,7 @@ mobj_filestats mobj_getFileStats(char *file)
 
 
 
-mobj_vec3 *mobj_strtovec3(char floatString[])
+meowVec3 *meowstov3(char floatString[])
 {
   char *element;
   //printf("\t%s",floatString);
