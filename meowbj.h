@@ -49,8 +49,6 @@ void freeObj(mobj_obj *objToFree){
 
 mobj_filestats mobj_getFileStats(char *file)
 {
-  struct timeval stop, start;
-  gettimeofday(&start, NULL);
   size_t vertexCount=0;
   size_t normalCount=0;
   size_t uvCount=0;
@@ -87,8 +85,7 @@ mobj_filestats mobj_getFileStats(char *file)
     .uvs=uvCount,
     .faces=faceCount
   };
-  gettimeofday(&stop, NULL);
-  printf("took %lu us\n", (stop.tv_sec - start.tv_sec) * 1000000 + stop.tv_usec - start.tv_usec);
+  
   return result;
 }
 
