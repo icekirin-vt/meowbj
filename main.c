@@ -6,23 +6,26 @@
 int main(void)
 {
 	printf("hello world \n");  
-	meowObj cube;
-	int success=loadObj("teapot.obj", &cube);
-	printf("load success:%d \n",success);
+	meowObj *cube=loadObj("../../cube_nn.obj");
+	
+	FILE *debugFile;
+	debugFile=fopen("debugFile.obj", "wb");
 
-	if (success!=0){
-		printf("loading failed, exit code :%d",success);
-		freeObj(&cube);
+	if (cube == NULL ){
+		fclose(debugFile);
+		printf("loading failed, exit code\n");
+		freeObj(cube);
 		return 0;
 	}
+	
+	int faceCount= cube->stats.faces;
+	for(int i=0; i<faceCount*3;i++){
+		fprintf(debugFile," v %f,%f,%f   \n",cube->vert[i].x,cube->vert[i].y,cube->vert[i].z);
 
-	printf("");
-	int vertsCount=cube.stats.vert;
-	for(int i=0; i<vertsCount;i++){
-		printf(" v: %f,%f,%f   \n",cube.vert[i].x,cube.vert[i].y,cube.vert[i].z);
 	}
-
-	freeObj(&cube);
+	
+	fclose(debugFile);
+	freeObj(cube);
 	return 0;
 }
-
+ 

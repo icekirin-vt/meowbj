@@ -54,6 +54,7 @@ void freeObj(meowObj *obj){
 	free(obj->vert);
 	free(obj->norm);
 	free(obj->texc);
+	free(obj);
 }
 
 
@@ -202,11 +203,11 @@ void _meowSaveVec2(char line[],size_t *index, meowVec2 *array)
 	(*index)++;
 }
 
-int loadObj(char path[],meowObj *resulting)
+meowObj *loadObj(char path[])
 {
 	char *fileContents=meowLoadFile(path);
 	if(fileContents==NULL)
-		return -1;
+		return NULL;
 
 	meowStats fileStats=meowGetFileStats(fileContents);
 	meowVec3 vertexStore[fileStats.vert];
@@ -224,13 +225,13 @@ int loadObj(char path[],meowObj *resulting)
 
 	size_t counter=0;
 	meowObj parsedPreAssembler={0};
-	meowObj saveObj={0};
+	meowObj *saveObj=malloc(sizeof(meowObj));
 
 
-	saveObj.vert= malloc(loadedFaces*3*sizeof( meowVec3 ));
-	saveObj.norm= malloc(loadedFaces*3*sizeof( meowVec3 ));
-	saveObj.texc= malloc(loadedFaces*3*sizeof( meowVec2 ));
-
+	saveObj->vert= malloc(loadedFaces*3*sizeof( meowVec3 ));
+	saveObj->norm= malloc(loadedFaces*3*sizeof( meowVec3 ));
+	saveObj->texc= malloc(loadedFaces*3*sizeof( meowVec2 ));
+	
 	while(startOfLine != NULL ){
 
 		char *nextLine=strchr(startOfLine, '\n');
@@ -243,11 +244,11 @@ int loadObj(char path[],meowObj *resulting)
 		strcpy(thisLine,startOfLine);
 
 		if (strcmp(lineattrib,"v ")==0)
-			_meowSaveVec3(thisLine+2,&vertexCount,	vertexStore); //+2 to skip "v " @ start of line
+			_meowSaveVec3(thisLine+2,&vertexCount,vertexStore); //+2 to skip "v " @ start of line
 		else if (strcmp(lineattrib,"vn")==0)
-			_meowSaveVec3(thisLine+3,&normalCount,	normalStore); //+3 to skip "vn " @ start of line	
+			_meowSaveVec3(thisLine+3,&normalCount,normalStore); //+3 to skip "vn " @ start of line	
 		else if (strcmp(lineattrib,"vt")==0) 
-			_meowSaveVec2(thisLine+3,&uvCount,		uvStore);   // +3 to skip vt @start
+			_meowSaveVec2(thisLine+3,&uvCount,uvStore);   // +3 to skip vt @start
 
 		else if (strcmp(lineattrib,"f ")==0){
 		if (faceCount==0){
@@ -259,7 +260,7 @@ int loadObj(char path[],meowObj *resulting)
 
 
 		//printf(" * |%s| \n",thisLine+2);
-		_meowRearrange(thisLine+2, parsedPreAssembler, &saveObj, &counter);
+		_meowRearrange(thisLine+2, parsedPreAssembler, saveObj, &counter);
 		faceCount++;
 		}
 
@@ -270,10 +271,11 @@ int loadObj(char path[],meowObj *resulting)
 	}
 
 
+	fileStats.vert=fileStats.faces*3;
+	saveObj->stats=fileStats;
+	//resulting=saveObj;
 	free(fileContents);
-	saveObj.stats=fileStats;
-	*resulting=saveObj;
-	return 0;
+	return saveObj;
 }
 
 
