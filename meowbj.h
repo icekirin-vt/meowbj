@@ -272,8 +272,8 @@ meowObj *loadObj(char path[])
 
 
 	fileStats.vert=faceCount*3;
-	fileStats.norm=faceCount*3;
-	fileStats.texc=faceCount*3;
+	fileStats.norm=(normalCount>0) ? faceCount*3: 0;
+	fileStats.texc=(uvCount>0) ?     faceCount*3: 0;
 	fileStats.faces=faceCount;
 	saveObj->stats=fileStats;
 	//resulting=saveObj;
