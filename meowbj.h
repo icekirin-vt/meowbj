@@ -151,8 +151,16 @@ meowVec2 *meowstov2(char floatString[])
 void _meowRearrange(char faceString[],meowObj loadedData, meowObj *saveTo, size_t *counter)
 {
 	char *element;
+	int vertexCount=0;
+	
 	element= strtok(faceString, " ");  
 	while(element!=NULL){
+		if(vertexCount>2){
+			printf(" NOT TRIANGULATED MESH \n");
+			return;
+		}
+		vertexCount++;
+		
 		char *secondSlashPos=NULL;
 		char *firstSlashPos=strchr(element,'/');
 
