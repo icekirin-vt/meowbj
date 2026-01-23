@@ -1,5 +1,5 @@
 # MEOW OBJ 
-* A kitten(smol) sized header only, C99 compliant obj model loader for your graphics programming needs*
+*A kitten(smol) sized header only, C99 compliant obj model loader for your graphics programming needs*
 
 ## Features:
 - Loads vector positions, normals, uv coordinates
