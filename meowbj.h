@@ -7,271 +7,274 @@
 #include <sys/time.h>
 
 typedef struct{
-  float x,y,z;
-}mobj_vec3;
+	float x;
+	float y;
+	float z;
+}meowVec3;
 
 typedef struct{
-  float u,v;
-}mobj_vec2;
+	float u;
+	float v;
+}meowVec2;
 
 typedef struct{
-  size_t verts,normals,uvs,faces;
-}mobj_filestats;
+	size_t vert;
+	size_t norm;
+	size_t texc;
+	size_t faces;
+}meowStats;
 
-char *mobj_loadFile(char path[])
+char *meowLoadFile(char path[])
 {
-  FILE *filePointer=fopen(path, "rb");
-  if( filePointer == NULL){
-    printf("ERROR \t PATH:\n[%s] not existing \n",path );
-    return NULL;
-  }
-  fseek(filePointer, 0L, SEEK_END);    //seeks to end of file to get its size for future malloc
-  size_t fileSize=ftell(filePointer);
-  rewind(filePointer);
+	FILE *filePointer=fopen(path, "rb");
 
-  char *fileContents=malloc((fileSize+1)*sizeof(char));
-  fread(fileContents, fileSize, 1,filePointer);
-  fclose(filePointer);
-  return fileContents;
+	if( filePointer == NULL){
+		printf("ERROR \t PATH:\n'%s' does not exist!\n",path );
+		return NULL;
+	}
+
+	fseek(filePointer, 0L, SEEK_END);
+	size_t fileSize=ftell(filePointer);
+	rewind(filePointer);
+
+	char *fileContents=malloc((fileSize+1)*sizeof(char));
+	fread(fileContents, fileSize, 1,filePointer);
+	fclose(filePointer);
+	return fileContents;
 }
 
 
 typedef struct{
-  mobj_vec3 *verts;
-  mobj_vec3 *norms;
-  mobj_vec2 *uvs;
-  mobj_filestats stats;
-}mobj_obj;
+	meowVec3 *vert;
+	meowVec3 *norm;
+	meowVec2 *texc;
+	meowStats stats;
+}meowObj;
 
-void freeObj(mobj_obj *objToFree){
-  
-  free(objToFree->verts);
-  free(objToFree->norms);
-  free(objToFree->uvs);
+void freeObj(meowObj *obj){
+	free(obj->vert);
+	free(obj->norm);
+	free(obj->texc);
 }
 
 
-mobj_filestats mobj_getFileStats(char *file)
+meowStats meowGetFileStats(char *file)
 {
-  size_t vertexCount=0;
-  size_t normalCount=0;
-  size_t uvCount=0;
-  size_t faceCount=0;
- 
-  char *currentLine=malloc(strlen(file)*sizeof(char));
-  strcpy(currentLine,file);
-  while(currentLine != NULL){
-    char *nextLine=strchr(currentLine, '\n');
-    if(nextLine) *nextLine='\0';
-    //printf("currentLine=[%s]\n",currentLine);
-    char lineattrib[3];
-    strncpy(lineattrib, currentLine, 2);
-    if (strcmp(lineattrib,"v ")==0){
-      vertexCount++;
-    }
-    else if (strcmp(lineattrib,"vn")==0){
-	normalCount++;
-      }
-    else if (strcmp(lineattrib,"vt")==0){
-      uvCount++;
-      }
-    else if (strcmp(lineattrib,"f ")==0){
-      faceCount++;
-      }
-    
-    if(nextLine) *nextLine='\n';
-    currentLine=nextLine ? (nextLine+1) : NULL;
-  }
-  free(currentLine);
-  mobj_filestats result={
-    .verts=vertexCount,
-    .normals=normalCount,
-    .uvs=uvCount,
-    .faces=faceCount
-  };
-  
-  return result;
+	size_t vertexCount=0;
+	size_t normalCount=0;
+	size_t texCount=0;
+	size_t faceCount=0;
+
+	char *lineStart=malloc(strlen(file)*sizeof(char));
+	strcpy(lineStart,file);
+
+	while(lineStart!=NULL){
+		char *nextLine=strchr(lineStart, '\n');
+		if(nextLine) *nextLine='\0';
+			char memberKind[3];
+
+		strncpy(memberKind, lineStart, 2);
+		if (strcmp(memberKind,"v ")==0)
+			vertexCount++;
+		else if (strcmp(memberKind,"vn")==0)
+			normalCount++;
+		else if (strcmp(memberKind,"vt")==0)
+			texCount++;
+		else if (strcmp(memberKind,"f ")==0)
+			faceCount++;
+
+		if(nextLine) 
+			*nextLine='\n';
+		lineStart=nextLine ? (nextLine+1) : NULL;
+	}
+
+	free(lineStart);
+	meowStats result={
+		.vert=vertexCount,
+		.norm=normalCount,
+		.texc=texCount,
+		.faces=faceCount
+	};
+
+	return result;
 }
 
 
 
-mobj_vec3 *mobj_strtovec3(char floatString[])
+meowVec3 *meowstov3(char floatString[])
 {
-  char *element;
-  //printf("\t%s",floatString);
-  element= strtok(floatString, " ");
-  int counter= 0;
-  mobj_vec3 *storedValue=malloc(sizeof(mobj_vec3));;
+	char *element;
+	//printf("\t%s",floatString);
+	element= strtok(floatString, " ");
+	int counter= 0;
+	meowVec3 *storedValue=malloc(sizeof(meowVec3));
 
-  while(element!= NULL){
-    //printf("\t%d:%s\n",counter,element);
-    if(counter==0)
-      storedValue->x=atof(element);
-    else if (counter==1)
-      storedValue->y=atof(element);
-    else
-      storedValue->z=atof(element);
+	while(element!= NULL){
+		//printf("\t%d:%s\n",counter,element);
+		if(counter==0)
+			storedValue->x=atof(element);
+		else if (counter==1)
+			storedValue->y=atof(element);
+		else
+			storedValue->z=atof(element);
 
-    if(counter<3) counter=counter+1;
-    element=strtok(NULL, " ");
-  }
-  
-  return storedValue;
-}
-mobj_vec2 mobj_strtovec2(char floatString[])
-{
-  char *element;
-  //printf("\t%s",floatString);
-  element= strtok(floatString, " ");
-  int counter= 0;
-  mobj_vec2 storedValue={0};
+		if(counter<3) 
+			counter=counter+1;
+		element=strtok(NULL, " ");
+	}
 
-  while(element!= NULL){
-    //printf("\t%d:%s\n",counter,elem);
-    if(counter==0)
-      storedValue.u=atof(element);
-    else
-      storedValue.v=atof(element);
-
-    if(counter<2) counter=counter+1;
-    element=strtok(NULL, " ");
-  }
-  
-  return storedValue;
+	return storedValue;
 }
 
 
-void mobj_objAssembler(char faceString[],mobj_obj loadedData, mobj_obj *saveTo, size_t *counter)
+meowVec2 *meowstov2(char floatString[])
 {
-  char *element;
-  element= strtok(faceString, " ");  
-  //printf("   parsed :");
-  while(element!=NULL){
-    //   "1\0 2\0 3\0"
-    char *secondSlashPos=NULL;
-    char *firstSlashPos=strchr(element,'/');
-    if(firstSlashPos!=NULL){
-      *firstSlashPos='\0';
-      secondSlashPos=strchr(firstSlashPos+1,'/');
-      if(secondSlashPos!=NULL){
-	*secondSlashPos='\0';
-      } else secondSlashPos=firstSlashPos;
-    }
-    else firstSlashPos=strchr(element,'\0')-1;
+	char *element;
+	element= strtok(floatString, " ");
+	int counter= 0;
+	meowVec2 *storedValue=malloc(sizeof(meowVec2));
 
-    
-    //printf("%s,%s,%s", element,firstSlashPos+1,secondSlashPos+1);
+	while(element!= NULL){
+		if(counter==0)
+			storedValue->u=atof(element);
+		else
+			storedValue->v=atof(element);
 
-    size_t  vertID,normalID,textureID;
-    vertID=    strtol(element,            NULL, 10)-1;
-    saveTo->verts[*counter] =loadedData.verts[vertID];
+		counter=(counter<2) ? counter+1 : 2;
+		element=strtok(NULL, " ");
+	}
 
-    if((loadedData.stats.uvs>0) && (strcmp(firstSlashPos+1,"")!=0)){
-    textureID= strtol(firstSlashPos+1,    NULL, 10)-1;
-    saveTo->uvs  [*counter]   =loadedData.uvs[textureID];
-    
-    }
-    
-    if((loadedData.stats.normals>0) && (strcmp(secondSlashPos+1,"")!=0)){
-    normalID=  strtol(secondSlashPos+1,   NULL, 10)-1;
-    saveTo->norms[*counter] =loadedData.norms[normalID];
-    }
-    
-    //printf(" faceid: %zu \nParsed: \t v:%zu  t:%zu  n:%zu", *counter,vertID,textureID,normalID);
-
-    
-    *counter=*counter+1;
-    //printf("\n");
-    element= strtok(NULL," ");
-  }
-  //printf("\n");
+	return storedValue;
 }
 
-int loadObj(char path[],mobj_obj *resulting)
+
+void _meowRearrange(char faceString[],meowObj loadedData, meowObj *saveTo, size_t *counter)
 {
-  char *fileContents=mobj_loadFile(path);
-  if(fileContents==NULL){
-    return -1;
-  }
-  mobj_filestats fileStats=mobj_getFileStats(fileContents);
-  mobj_vec3 vertexStore[fileStats.verts];
-  mobj_vec3 normalStore[fileStats.normals];
-  mobj_vec2 uvStore[fileStats.uvs];
+	char *element;
+	element= strtok(faceString, " ");  
+	while(element!=NULL){
+		char *secondSlashPos=NULL;
+		char *firstSlashPos=strchr(element,'/');
 
-  
-  size_t vertexCount=0;
-  size_t normalCount=0;
-  size_t uvCount=0;
-  size_t faceCount=0;
+		if(firstSlashPos!=NULL){
+			*firstSlashPos='\0';
+			secondSlashPos=(firstSlashPos!=NULL) ? strchr(firstSlashPos+1,'/') : NULL;
+			if(secondSlashPos!=NULL)
+				*secondSlashPos='\0';
+		}	
+		else firstSlashPos=strchr(element,'\0')-1;
 
-  size_t loadedFaces=fileStats.faces;
-  //faceCount=fileStats.faces;
-  
-  char *currentLine=fileContents;
-  size_t counter=0;
-  mobj_obj parsedPreAssembler={0};
-  mobj_obj saveObj={0};
+		size_t  vertID;
+		size_t	normalID;
+		size_t	textureID;
+
+		vertID=strtol(element,NULL, 10)-1;
+		saveTo->vert[*counter]=loadedData.vert[vertID];
+
+		if((loadedData.stats.texc>0) && (strcmp(firstSlashPos+1,"")!=0)){
+			textureID= strtol(firstSlashPos+1,    NULL, 10)-1;
+			saveTo->texc[*counter]=loadedData.texc[textureID];
+		}
+
+		if((loadedData.stats.norm>0) && (strcmp(secondSlashPos+1,"")!=0)){
+			normalID=  strtol(secondSlashPos+1,   NULL, 10)-1;
+			saveTo->norm[*counter]=loadedData.norm[normalID];
+		}
+
+		*counter=*counter+1;
+		element= strtok(NULL," ");
+	}
+}
+
+void _meowSaveVec3(char line[],size_t *index, meowVec3 *array)
+{
+	meowVec3 *parsedVec3= meowstov3(line);
+	memcpy(&array[*index],parsedVec3,sizeof(meowVec3));
+	free(parsedVec3);
+	(*index)++;
+}
 
 
-  saveObj.verts= malloc(loadedFaces*3*sizeof( mobj_vec3 ));
-  saveObj.norms= malloc(loadedFaces*3*sizeof( mobj_vec3 ));
-  saveObj.uvs=   malloc(loadedFaces*3*sizeof( mobj_vec2 ));
-  
-  while(currentLine != NULL ){
-    
-    char *nextLine=strchr(currentLine, '\n');
-    if(nextLine) *nextLine ='\0';
-    char lineattrib[3];
-    strncpy(lineattrib,currentLine,2);
-    //printf("[%s]",lineattrib);
-    char actuallyCurrentLine[40];
-    
-    strcpy(actuallyCurrentLine,currentLine);
-    if (strcmp(lineattrib,"v ")==0){
-      //vertexStore[vertexCount]
-      mobj_vec3 *parsedVec3=mobj_strtovec3(actuallyCurrentLine+2); //+2 just to skip "v " @start
-      memcpy(&vertexStore[vertexCount],parsedVec3, sizeof(mobj_vec3));
-      free(parsedVec3);
-      vertexCount++;
-    }
-    else if (strcmp(lineattrib,"vn")==0){
-      mobj_vec3 *parsedVec3=mobj_strtovec3(actuallyCurrentLine+3);  //+3 for vn @start
-      memcpy(&normalStore[normalCount],parsedVec3,sizeof(mobj_vec3));
-      free(parsedVec3);
-      normalCount++;
-    }
-    else if (strcmp(lineattrib,"vt")==0){  // +3 for vt @start
-      uvStore[uvCount]=mobj_strtovec2(actuallyCurrentLine+3);
-      uvCount++;
-    }
-    else if (strcmp(lineattrib,"f ")==0){
-      if (faceCount==0){
-	//printf("saving all stores");
-	parsedPreAssembler.verts=vertexStore;
-	parsedPreAssembler.norms=normalStore;
-	parsedPreAssembler.uvs=uvStore;
-	parsedPreAssembler.stats=fileStats;
-      }
+void _meowSaveVec2(char line[],size_t *index, meowVec2 *array)
+{
+	meowVec2 *parsedVec2= meowstov2(line);
+	memcpy(&array[*index],parsedVec2,sizeof(meowVec2));
+	free(parsedVec2);
+	(*index)++;
+}
 
-      
-      //printf(" * |%s| \n",actuallyCurrentLine+2);
-      mobj_objAssembler(actuallyCurrentLine+2, parsedPreAssembler, &saveObj, &counter);
-      faceCount++;
-      }
-    
+int loadObj(char path[],meowObj *resulting)
+{
+	char *fileContents=meowLoadFile(path);
+	if(fileContents==NULL)
+		return -1;
 
-    //printf("\n");
-    if(nextLine) *nextLine='\n';
-    currentLine=nextLine ? (nextLine+1) : NULL;
-  }
-  
- 
-  free(fileContents);
-  
-  saveObj.stats=fileStats;
-  
-  *resulting=saveObj;
-  return 0;
+	meowStats fileStats=meowGetFileStats(fileContents);
+	meowVec3 vertexStore[fileStats.vert];
+	meowVec3 normalStore[fileStats.norm];
+	meowVec2 uvStore[fileStats.texc];
+
+
+	size_t vertexCount=0;
+	size_t normalCount=0;
+	size_t uvCount=0;
+	size_t faceCount=0;
+
+	size_t loadedFaces=fileStats.faces;
+	char *startOfLine=fileContents;
+
+	size_t counter=0;
+	meowObj parsedPreAssembler={0};
+	meowObj saveObj={0};
+
+
+	saveObj.vert= malloc(loadedFaces*3*sizeof( meowVec3 ));
+	saveObj.norm= malloc(loadedFaces*3*sizeof( meowVec3 ));
+	saveObj.texc= malloc(loadedFaces*3*sizeof( meowVec2 ));
+
+	while(startOfLine != NULL ){
+
+		char *nextLine=strchr(startOfLine, '\n');
+		if(nextLine) 
+			*nextLine ='\0';
+
+		char lineattrib[3];
+		strncpy(lineattrib,startOfLine,2);
+		char thisLine[40];
+		strcpy(thisLine,startOfLine);
+
+		if (strcmp(lineattrib,"v ")==0)
+			_meowSaveVec3(thisLine+2,&vertexCount,	vertexStore); //+2 to skip "v " @ start of line
+		else if (strcmp(lineattrib,"vn")==0)
+			_meowSaveVec3(thisLine+3,&normalCount,	normalStore); //+3 to skip "vn " @ start of line	
+		else if (strcmp(lineattrib,"vt")==0) 
+			_meowSaveVec2(thisLine+3,&uvCount,		uvStore);   // +3 to skip vt @start
+
+		else if (strcmp(lineattrib,"f ")==0){
+		if (faceCount==0){
+			parsedPreAssembler.vert=vertexStore;
+			parsedPreAssembler.norm=normalStore;
+			parsedPreAssembler.texc=uvStore;
+			parsedPreAssembler.stats=fileStats;
+		}
+
+
+		//printf(" * |%s| \n",thisLine+2);
+		_meowRearrange(thisLine+2, parsedPreAssembler, &saveObj, &counter);
+		faceCount++;
+		}
+
+
+		//printf("\n");
+		if(nextLine) *nextLine='\n';
+		startOfLine=nextLine ? (nextLine+1) : NULL;
+	}
+
+
+	free(fileContents);
+	saveObj.stats=fileStats;
+	*resulting=saveObj;
+	return 0;
 }
 
 
