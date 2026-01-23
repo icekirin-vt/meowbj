@@ -148,7 +148,7 @@ meowVec2 *meowstov2(char floatString[])
 }
 
 
-void _meowRearrange(char faceString[],meowObj loadedData, meowObj *saveTo, size_t *counter)
+void _meowRearrange(char faceString[],meowObj loadedData, meowObj *saveTo, size_t *counter, int *status)
 {
 	char *element;
 	int vertexCount=0;
@@ -157,6 +157,7 @@ void _meowRearrange(char faceString[],meowObj loadedData, meowObj *saveTo, size_
 	while(element!=NULL){
 		if(vertexCount>2){
 			printf(" NOT TRIANGULATED MESH \n");
+			*status=-1;
 			return;
 		}
 		vertexCount++;
@@ -190,6 +191,7 @@ void _meowRearrange(char faceString[],meowObj loadedData, meowObj *saveTo, size_
 		}
 
 		*counter=*counter+1;
+		*status=0;
 		element= strtok(NULL," ");
 	}
 }
@@ -268,7 +270,10 @@ meowObj *loadObj(char path[])
 
 
 		//printf(" * |%s| \n",thisLine+2);
-		_meowRearrange(thisLine+2, parsedPreAssembler, saveObj, &counter);
+		int faceParseSuccess=0;
+		_meowRearrange(thisLine+2, parsedPreAssembler, saveObj, &counter, &faceParseSuccess);
+		if( faceParseSuccess !=0)
+			return NULL;
 		faceCount++;
 		}
 
