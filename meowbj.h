@@ -222,9 +222,9 @@ meowObj *loadObj(char path[])
 		return NULL;
 
 	meowStats fileStats=meowGetFileStats(fileContents);
-	meowVec3 vertexStore[fileStats.vert];
-	meowVec3 normalStore[fileStats.norm];
-	meowVec2 uvStore[fileStats.texc];
+	meowVec3 *vertexStore = malloc(sizeof(meowVec3) * fileStats.vert);
+	meowVec3 *normalStore  = malloc(sizeof(meowVec3) * fileStats.norm);
+	meowVec2 *uvStore      = malloc(sizeof(meowVec2) *fileStats.texc);
 
 
 	size_t vertexCount=0;
@@ -256,18 +256,18 @@ meowObj *loadObj(char path[])
 		strcpy(thisLine,startOfLine);
 
 		if (strcmp(lineattrib,"v ")==0)
-			_meowSaveVec3(thisLine+2,&vertexCount,vertexStore); //+2 to skip "v " @ start of line
+			_meowSaveVec3(thisLine+2,&vertexCount,*vertexStore); //+2 to skip "v " @ start of line
 		else if (strcmp(lineattrib,"vn")==0)
-			_meowSaveVec3(thisLine+3,&normalCount,normalStore); //+3 to skip "vn " @ start of line	
+			_meowSaveVec3(thisLine+3,&normalCount,*normalStore); //+3 to skip "vn " @ start of line	
 		else if (strcmp(lineattrib,"vt")==0) 
-			_meowSaveVec2(thisLine+3,&uvCount,uvStore);   // +3 to skip vt @start
+			_meowSaveVec2(thisLine+3,&uvCount,*uvStore);   // +3 to skip vt @start
 
 		else if (strcmp(lineattrib,"f ")==0){
 		if (faceCount==0){
-			parsedPreAssembler.vert=vertexStore;
-			parsedPreAssembler.norm=normalStore;
-			parsedPreAssembler.texc=uvStore;
-			parsedPreAssembler.stats=fileStats;
+			parsedPreAssembler.vert		=*vertexStore;
+			parsedPreAssembler.norm		=*normalStore;
+			parsedPreAssembler.texc		=*uvStore;
+			parsedPreAssembler.stats	=*fileStats;
 		}
 
 
@@ -291,6 +291,10 @@ meowObj *loadObj(char path[])
 	fileStats.texc=(uvCount>0) ?     faceCount*3: 0;
 	fileStats.faces=faceCount;
 	saveObj->stats=fileStats;
+
+	free(vertexStore);
+	free(normalStore);
+	free(uvStore);
 	//resulting=saveObj;
 	free(fileContents);
 	return saveObj;
