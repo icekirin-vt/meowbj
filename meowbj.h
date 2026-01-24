@@ -183,11 +183,13 @@ void _meowRearrange(char faceString[],meowObj loadedData, meowObj *saveTo, size_
 		if((loadedData.stats.texc>0) && (strcmp(firstSlashPos+1,"")!=0)){
 			textureID= strtol(firstSlashPos+1,    NULL, 10)-1;
 			saveTo->texc[*counter]=loadedData.texc[textureID];
+			*firstSlashPos='/';
 		}
 
 		if((loadedData.stats.norm>0) && (strcmp(secondSlashPos+1,"")!=0)){
 			normalID=  strtol(secondSlashPos+1,   NULL, 10)-1;
 			saveTo->norm[*counter]=loadedData.norm[normalID];
+			*secondSlashPos='/';
 		}
 
 		*counter=*counter+1;
